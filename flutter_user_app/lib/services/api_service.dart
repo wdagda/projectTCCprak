@@ -1,0 +1,111 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
+
+class ApiService {
+  static const String baseUrl = 'http://10.0.2.2:3001/api';
+
+  // Helper method to get headers
+  static Future<Map<String, String>> _getHeaders() async {
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+  }
+
+  // Auth Methods
+  static Future<Map<String, dynamic>> login(String email, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/login'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'email': email, 'password': password}),
+    );
+    return _processResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> register(String name, String email, String password) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/register'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'name': name, 'email': email, 'password': password}),
+    );
+    return _processResponse(response);
+  }
+
+  // User Methods
+  static Future<Map<String, dynamic>> updateUser(int id, String name, String email, String password) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/users/$id'),
+      headers: await _getHeaders(),
+      body: jsonEncode({
+        if (name.isNotEmpty) 'name': name,
+        if (email.isNotEmpty) 'email': email,
+        if (password.isNotEmpty) 'password': password,
+      }),
+    );
+    return _processResponse(response);
+  }
+
+  // Borrowing Methods
+  static Future<List<dynamic>> getUserBorrowings(int userId) async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/borrowings/user/$userId'),
+      headers: await _getHeaders(),
+    );
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load borrowings');
+    }
+  }
+
+  static Future<Map<String, dynamic>> updateBorrowingStatus(int id, String status) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/borrowings/$id/status'),
+      headers: await _getHeaders(),
+      body: jsonEncode({'status': status}),
+    );
+    return _processResponse(response);
+  }
+
+  static Future<Map<String, dynamic>> confirmHandover(int id) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/borrowings/$id/handover'),
+      headers: await _getHeaders(),
+      body: jsonEncode({
+        'terms_agreed': true,
+        'signature_url': '/dummy-signature.png',
+      }),
+    );
+    return _processResponse(response);
+  }
+
+  static Map<String, dynamic> _processResponse(http.Response response) {
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return jsonDecode(response.body);
+    } else {
+      final decoded = jsonDecode(response.body);
+      throw Exception(decoded['error'] ?? 'An error occurred');
+    }
+  }
+
+  // Session Management
+  static Future<void> saveUser(Map<String, dynamic> user) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('appUser', jsonEncode(user));
+  }
+
+  static Future<Map<String, dynamic>?> getUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userStr = prefs.getString('appUser');
+    if (userStr != null) {
+      return jsonDecode(userStr);
+    }
+    return null;
+  }
+
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('appUser');
+  }
+}
