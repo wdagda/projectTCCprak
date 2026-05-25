@@ -27,8 +27,7 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('employee');
-  const [departmentId, setDepartmentId] = useState('');
-  const [departments, setDepartments] = useState([]);
+  const [departmentName, setDepartmentName] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -45,7 +44,7 @@ function Login({ onLogin }) {
     setSuccessMsg('');
 
     if (isRegister) {
-      axios.post(`${API_URL}/auth/register`, { name, email, password, role, departmentId }).then(res => {
+      axios.post(`${API_URL}/auth/register`, { name, email, password, role, department: departmentName }).then(res => {
         const user = res.data.user;
         if (user.role === 'admin') {
           onLogin(user);
@@ -75,23 +74,30 @@ function Login({ onLogin }) {
   return (
     <div className="login-container">
       <form className="login-box" onSubmit={handleSubmit}>
-        <h1>{isRegister ? 'Register Admin' : 'Login Admin'}</h1>
+        <h1 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>{isRegister ? 'Register' : 'Login Admin'}</h1>
         {error && <p className="error">{error}</p>}
         {successMsg && <p className="success">{successMsg}</p>}
-        <input className="form-input" placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-        <input className="form-input" placeholder="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
         
-        {isRegister && (
-          <>
-            <input className="form-input" placeholder="Nama Lengkap" value={name} onChange={e => setName(e.target.value)} required />
-            <select className="form-input" value={departmentId} onChange={e => setDepartmentId(e.target.value)}>
-              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-            </select>
-          </>
-        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+          <input className="form-input" placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+          <input className="form-input" placeholder="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+          
+          {isRegister && (
+            <>
+              <input className="form-input" placeholder="Nama Lengkap" value={name} onChange={e => setName(e.target.value)} required />
+              
+              <select className="form-input" value={role} onChange={e => setRole(e.target.value)} required style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-dark)' }}>
+                <option value="employee">Employee</option>
+                <option value="admin">Admin</option>
+              </select>
+
+              <input className="form-input" placeholder="Departemen (Contoh: IT Support)" value={departmentName} onChange={e => setDepartmentName(e.target.value)} required />
+            </>
+          )}
+        </div>
 
         <button className="btn" type="submit" style={{ width: '100%' }}>{isRegister ? 'Daftar' : 'Login'}</button>
-        <p style={{ cursor: 'pointer', textAlign: 'center', marginTop: '1rem' }} onClick={() => setIsRegister(!isRegister)}>
+        <p style={{ cursor: 'pointer', textAlign: 'center', marginTop: '1rem', color: 'var(--text-secondary)' }} onClick={() => setIsRegister(!isRegister)}>
           {isRegister ? 'Sudah punya akun? Login' : 'Belum punya akun? Register'}
         </p>
       </form>
@@ -460,9 +466,9 @@ function Account({ adminUser, setAdminUser, onLogout }) {
   return (
     <div>
       <h1 className="page-title">Akun Saya</h1>
-      <div className="card" style={{ maxWidth: '500px', padding: '2rem' }}>
-        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Detail Profil</h2>
-        {message && <div style={{ marginBottom: '1rem', color: message.includes('Gagal') ? 'red' : 'var(--success)' }}>{message}</div>}
+      <div className="card form-card">
+        <h2 className="card-title">Detail Profil</h2>
+        {message && <div className={`alert ${message.includes('Gagal') ? 'alert-danger' : 'alert-success'}`}>{message}</div>}
         <form onSubmit={handleUpdate}>
           <div className="form-group">
             <label className="form-label">Nama Lengkap</label>
@@ -476,13 +482,13 @@ function Account({ adminUser, setAdminUser, onLogout }) {
             <label className="form-label">Password Baru (Opsional)</label>
             <input type="password" className="form-input" placeholder="Isi untuk mengganti password" value={password} onChange={e => setPassword(e.target.value)} />
           </div>
-          <button type="submit" className="btn" style={{ width: '100%', marginBottom: '1.5rem' }}>Simpan Perubahan</button>
+          <button type="submit" className="btn btn-full">Simpan Perubahan</button>
         </form>
 
-        <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+        <hr className="divider" />
         
-        <h2 style={{ marginBottom: '1rem', fontSize: '1.25rem', color: 'var(--danger)' }}>Sesi</h2>
-        <button className="btn btn-danger" style={{ width: '100%' }} onClick={onLogout}>Logout</button>
+        <h2 className="card-title text-danger">Sesi</h2>
+        <button className="btn btn-danger btn-full" onClick={onLogout}>Logout</button>
       </div>
     </div>
   );
@@ -510,9 +516,9 @@ function App() {
 
   return (
     <BrowserRouter>
-      <div className="app-container">
+      <div className="layout" style={{ display: 'flex', minHeight: '100vh' }}>
         <Sidebar />
-        <div className="main-content">
+        <div className="main-content" style={{ flex: 1, padding: '2rem' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/assets" element={<Assets />} />
