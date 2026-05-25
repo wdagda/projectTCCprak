@@ -1,10 +1,23 @@
+require('dotenv').config();
 const { Sequelize, DataTypes } = require('sequelize');
 const path = require('path');
 
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: path.join(__dirname, '..', 'database.sqlite'),
+// Mengambil konfigurasi dari file .env (jika ada), atau gunakan default (bisa diubah nanti)
+const dbName = process.env.DB_NAME || 'praktccc_db';
+const dbUser = process.env.DB_USER || 'root';
+const dbPassword = process.env.DB_PASSWORD || '';
+const dbHost = process.env.DB_HOST || '127.0.0.1';
+const dbDialect = process.env.DB_DIALECT || 'mysql';
+
+const sequelize = new Sequelize(dbName, dbUser, dbPassword, {
+  host: dbHost,
+  dialect: dbDialect,
   logging: false,
+  dialectOptions: {
+    ssl: {
+      rejectUnauthorized: false
+    }
+  }
 });
 
 // 1. Department
