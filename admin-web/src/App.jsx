@@ -5,7 +5,7 @@ import './index.css';
 
 const API_URL = 'http://34.128.121.83:3001/api';
 
-function Sidebar({ onLogout }) {
+function Sidebar() {
   const location = useLocation();
   return (
     <div className="sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -14,9 +14,8 @@ function Sidebar({ onLogout }) {
         <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Dashboard</Link>
         <Link to="/assets" className={`nav-link ${location.pathname === '/assets' ? 'active' : ''}`}>Manajemen Aset</Link>
         <Link to="/borrowings" className={`nav-link ${location.pathname === '/borrowings' ? 'active' : ''}`}>Log Peminjaman</Link>
-      </div>
-      <div style={{ marginTop: 'auto', padding: '1rem' }}>
-        <button className="btn btn-danger" style={{ width: '100%' }} onClick={onLogout}>Logout</button>
+        <Link to="/users" className={`nav-link ${location.pathname === '/users' ? 'active' : ''}`}>Daftar Pengguna</Link>
+        <Link to="/account" className={`nav-link ${location.pathname === '/account' ? 'active' : ''}`}>Akun Saya</Link>
       </div>
     </div>
   );
@@ -416,6 +415,94 @@ function Borrowings() {
   );
 }
 
+function Users() {
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
+  }, []);
+
+  return (
+    <div>
+      <h1 className="page-title">Daftar Pengguna</h1>
+      <div className="card table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nama Lengkap</th>
+              <th>Email</th>
+              <th>Role</th>
+              <th>Departemen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => (
+              <tr key={u.id}>
+                <td>{u.id}</td>
+                <td>{u.name}</td>
+                <td>{u.email}</td>
+                <td><span className={`status-badge status-${u.role === 'admin' ? 'success' : 'available'}`}>{u.role}</span></td>
+                <td>{u.Department?.name || '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function Account({ adminUser, setAdminUser, onLogout }) {
+  const [name, setName] = useState(adminUser.name);
+  const [email, setEmail] = useState(adminUser.email);
+  const [password, setPassword] = useState('');
+  const [message, setMessage] = useState('');
+
+  const handleUpdate = (e) => {
+    e.preventDefault();
+    axios.put(`${API_URL}/users/${adminUser.id}`, { name, email, password }).then(res => {
+      const updatedUser = res.data.user;
+      setAdminUser(updatedUser);
+      localStorage.setItem('adminUser', JSON.stringify(updatedUser));
+      setMessage('Profil berhasil diperbarui!');
+      setPassword('');
+    }).catch(err => {
+      setMessage('Gagal memperbarui profil.');
+    });
+  };
+
+  return (
+    <div>
+      <h1 className="page-title">Akun Saya</h1>
+      <div className="card" style={{ maxWidth: '500px', padding: '2rem' }}>
+        <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem' }}>Detail Profil</h2>
+        {message && <div style={{ marginBottom: '1rem', color: message.includes('Gagal') ? 'red' : 'var(--success)' }}>{message}</div>}
+        <form onSubmit={handleUpdate}>
+          <div className="form-group">
+            <label className="form-label">Nama Lengkap</label>
+            <input type="text" className="form-input" required value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input type="email" className="form-input" required value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password Baru (Opsional)</label>
+            <input type="password" className="form-input" placeholder="Isi untuk mengganti password" value={password} onChange={e => setPassword(e.target.value)} />
+          </div>
+          <button type="submit" className="btn" style={{ width: '100%', marginBottom: '1.5rem' }}>Simpan Perubahan</button>
+        </form>
+
+        <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+        
+        <h2 style={{ marginBottom: '1rem', fontSize: '1.25rem', color: 'var(--danger)' }}>Sesi</h2>
+        <button className="btn btn-danger" style={{ width: '100%' }} onClick={onLogout}>Logout</button>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [adminUser, setAdminUser] = useState(() => {
     const saved = localStorage.getItem('adminUser');
@@ -439,12 +526,14 @@ function App() {
   return (
     <BrowserRouter>
       <div className="app-container">
-        <Sidebar onLogout={handleLogout} />
+        <Sidebar />
         <div className="main-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/assets" element={<Assets />} />
             <Route path="/borrowings" element={<Borrowings />} />
+            <Route path="/users" element={<Users />} />
+            <Route path="/account" element={<Account adminUser={adminUser} setAdminUser={setAdminUser} onLogout={handleLogout} />} />
           </Routes>
         </div>
       </div>
