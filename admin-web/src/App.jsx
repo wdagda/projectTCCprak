@@ -23,30 +23,61 @@ function Sidebar({ onLogout }) {
 }
 
 function Login({ onLogin }) {
+  const [isRegister, setIsRegister] = useState(false);
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('admin');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    axios.post(`${API_URL}/auth/login`, { email, password }).then(res => {
-      const user = res.data.user;
-      if (user.role !== 'admin') {
-        setError('Aplikasi ini khusus Admin. Silakan gunakan Mobile App');
-        return;
-      }
-      onLogin(user);
-    }).catch(err => {
-      setError('Login gagal. Periksa email & password.');
-    });
+    setError('');
+    setSuccessMsg('');
+
+    if (isRegister) {
+      axios.post(`${API_URL}/auth/register`, { name, email, password, role }).then(res => {
+        const user = res.data.user;
+        if (user.role === 'admin') {
+          onLogin(user);
+        } else {
+          setSuccessMsg('Akun Employee berhasil dibuat! Silakan gunakan Mobile App untuk login.');
+          setIsRegister(false);
+          setEmail('');
+          setPassword('');
+        }
+      }).catch(err => {
+        setError(err.response?.data?.error || 'Gagal mendaftar.');
+      });
+    } else {
+      axios.post(`${API_URL}/auth/login`, { email, password }).then(res => {
+        const user = res.data.user;
+        if (user.role !== 'admin') {
+          setError('Aplikasi ini khusus Admin. Silakan gunakan Mobile App');
+          return;
+        }
+        onLogin(user);
+      }).catch(err => {
+        setError('Login gagal. Periksa email & password.');
+      });
+    }
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-secondary)' }}>
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: 'var(--bg-secondary)', padding: '2rem' }}>
       <div className="card" style={{ width: '400px', padding: '2rem' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Admin Login</h2>
+        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>{isRegister ? 'Sign Up' : 'Admin Login'}</h2>
         {error && <div style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+        {successMsg && <div style={{ color: 'var(--success)', marginBottom: '1rem', textAlign: 'center' }}>{successMsg}</div>}
+        
         <form onSubmit={handleSubmit}>
+          {isRegister && (
+            <div className="form-group">
+              <label className="form-label">Nama Lengkap</label>
+              <input type="text" required className="form-input" value={name} onChange={e => setName(e.target.value)} />
+            </div>
+          )}
           <div className="form-group">
             <label className="form-label">Email</label>
             <input type="email" required className="form-input" value={email} onChange={e => setEmail(e.target.value)} />
@@ -55,8 +86,30 @@ function Login({ onLogin }) {
             <label className="form-label">Password</label>
             <input type="password" required className="form-input" value={password} onChange={e => setPassword(e.target.value)} />
           </div>
-          <button type="submit" className="btn" style={{ width: '100%' }}>Login</button>
+          {isRegister && (
+            <div className="form-group">
+              <label className="form-label">Role Akses</label>
+              <select className="form-input" value={role} onChange={e => setRole(e.target.value)}>
+                <option value="admin">Administrator (Akses Web)</option>
+                <option value="employee">Employee (Akses Mobile)</option>
+              </select>
+            </div>
+          )}
+          <button type="submit" className="btn" style={{ width: '100%', marginBottom: '1rem' }}>
+            {isRegister ? 'Daftar Sekarang' : 'Login'}
+          </button>
         </form>
+        
+        <div style={{ textAlign: 'center', fontSize: '0.9rem' }}>
+          {isRegister ? 'Sudah punya akun? ' : 'Belum punya akun? '}
+          <span style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
+            setIsRegister(!isRegister);
+            setError('');
+            setSuccessMsg('');
+          }}>
+            {isRegister ? 'Login di sini' : 'Sign Up'}
+          </span>
+        </div>
       </div>
     </div>
   );

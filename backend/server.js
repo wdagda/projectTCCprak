@@ -137,7 +137,7 @@ app.post('/api/auth/login', async (req, res) => {
 // 11b. POST /api/auth/register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password, DepartmentId } = req.body;
+    const { name, email, password, DepartmentId, role } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
@@ -146,7 +146,8 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Email already exists' });
     }
     const deptId = DepartmentId || 1; // fallback to default
-    const user = await models.User.create({ name, email, password, role: 'employee', DepartmentId: deptId });
+    const userRole = (role === 'admin' || role === 'employee') ? role : 'employee';
+    const user = await models.User.create({ name, email, password, role: userRole, DepartmentId: deptId });
     ActivityLog.insert({ action: 'register', user_id: user.id, user_email: user.email, timestamp: new Date() });
     res.json({ success: true, user });
   } catch (err) {
