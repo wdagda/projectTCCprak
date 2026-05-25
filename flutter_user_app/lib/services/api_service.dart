@@ -3,18 +3,18 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:3001/api';
+  static const String baseUrl = 'http://34.128.121.83:3001/api';
 
   // Helper method to get headers
   static Future<Map<String, String>> _getHeaders() async {
-    return {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+    return {'Content-Type': 'application/json', 'Accept': 'application/json'};
   }
 
   // Auth Methods
-  static Future<Map<String, dynamic>> login(String email, String password) async {
+  static Future<Map<String, dynamic>> login(
+    String email,
+    String password,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/login'),
       headers: await _getHeaders(),
@@ -23,7 +23,11 @@ class ApiService {
     return _processResponse(response);
   }
 
-  static Future<Map<String, dynamic>> register(String name, String email, String password) async {
+  static Future<Map<String, dynamic>> register(
+    String name,
+    String email,
+    String password,
+  ) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: await _getHeaders(),
@@ -33,7 +37,12 @@ class ApiService {
   }
 
   // User Methods
-  static Future<Map<String, dynamic>> updateUser(int id, String name, String email, String password) async {
+  static Future<Map<String, dynamic>> updateUser(
+    int id,
+    String name,
+    String email,
+    String password,
+  ) async {
     final response = await http.put(
       Uri.parse('$baseUrl/users/$id'),
       headers: await _getHeaders(),
@@ -59,7 +68,10 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> updateBorrowingStatus(int id, String status) async {
+  static Future<Map<String, dynamic>> updateBorrowingStatus(
+    int id,
+    String status,
+  ) async {
     final response = await http.put(
       Uri.parse('$baseUrl/borrowings/$id/status'),
       headers: await _getHeaders(),

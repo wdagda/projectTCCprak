@@ -9,8 +9,28 @@ app.use(cors());
 app.use(express.json());
 
 // Sync SQL DB
-sequelize.sync().then(() => {
+sequelize.sync().then(async () => {
   console.log('SQL Database synced');
+  // Seed default admin if none exists
+  const { User } = require('./models');
+  const admin = await User.findOne({ where: { email: 'admin@example.com' } });
+  if (!admin) {
+    await User.create({
+      name: 'Admin',
+      email: 'admin@example.com',
+      password: 'admin123',
+      role: 'admin',
+    });
+    console.log('Created default admin user (admin@example.com / admin123)');
+  }
+
+  // Seed default category if none exists
+  const { Category } = require('./models');
+  const category = await Category.findByPk(1);
+  if (!category) {
+    await Category.create({ name: 'General', description: 'Kategori Umum' });
+    console.log('Created default category');
+  }
 });
 
 // --- ROUTES ---
