@@ -85,4 +85,4 @@ Backend mengekspos beberapa endpoint di bawah awalan (prefix) `/api`:
 
 ## link
 
-http://praktcc-admin-web.storage.googleapis.com/index.html#/
+http://p    raktcc-admin-web.storage.googleapis.com/index.html#/

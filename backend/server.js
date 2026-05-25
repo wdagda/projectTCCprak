@@ -164,14 +164,15 @@ app.get('/api/users', async (req, res) => {
 // 12b. PUT /api/users/:id
 app.put('/api/users/:id', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, DepartmentId } = req.body;
     const updateData = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email;
     if (password) updateData.password = password;
+    if (DepartmentId) updateData.DepartmentId = DepartmentId;
     
     await models.User.update(updateData, { where: { id: req.params.id } });
-    const updatedUser = await models.User.findByPk(req.params.id);
+    const updatedUser = await models.User.findByPk(req.params.id, { include: [models.Department] });
     res.json({ success: true, user: updatedUser });
   } catch (err) {
     res.status(500).json({ error: err.message });

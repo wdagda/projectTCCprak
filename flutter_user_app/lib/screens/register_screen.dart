@@ -15,6 +15,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
+  List<Map<String, dynamic>> _departments = [];
+  int? _selectedDepartmentId;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDepartments();
+  }
+
+  Future<void> _loadDepartments() async {
+    try {
+      final data = await ApiService.getDepartments();
+      setState(() {
+        _departments = List<Map<String, dynamic>>.from(data['departments'] ?? data);
+        if (_departments.isNotEmpty) {
+          _selectedDepartmentId = _departments.first['id'];
+        }
+      });
+    } catch (e) {
+      // ignore errors for now
+    }
+  }
 
   Future<void> _register() async {
     if (_nameController.text.trim().isEmpty || 
@@ -36,6 +58,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
+        DepartmentId: _selectedDepartmentId,
       );
       
       final user = data['user'];
@@ -106,7 +129,22 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: const InputDecoration(labelText: 'Password'),
                   obscureText: true,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                if (_departments.isNotEmpty)
+                  DropdownButtonFormField<int>(
+                    value: _selectedDepartmentId,
+                    decoration: const InputDecoration(labelText: 'Departemen'),
+                    items: _departments.map((dept) => DropdownMenuItem<int>(
+                      value: dept['id'],
+                      child: Text(dept['name']),
+                    )).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedDepartmentId = val;
+                      });
+                    },
+                  ),
+                const SizedBox(height: 32),
                 
                 ElevatedButton(
                   onPressed: _isLoading ? null : _register,

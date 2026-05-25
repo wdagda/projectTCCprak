@@ -21,6 +21,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.initState();
     _nameController = TextEditingController(text: widget.user['name']);
     _emailController = TextEditingController(text: widget.user['email']);
+    _selectedDepartmentId = widget.user['DepartmentId'];
+    _loadDepartments();
+  }
+
+  List<Map<String, dynamic>> _departments = [];
+  int? _selectedDepartmentId;
+
+  Future<void> _loadDepartments() async {
+    try {
+      final data = await ApiService.getDepartments();
+      setState(() {
+        _departments = List<Map<String, dynamic>>.from(data['departments'] ?? data);
+      });
+    } catch (e) {
+      // ignore errors for now
+    }
   }
 
   String _getInitials(String name) {
@@ -38,6 +54,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
+        DepartmentId: _selectedDepartmentId,
       );
       
       final updatedUser = data['user'];
@@ -87,6 +104,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               decoration: const InputDecoration(labelText: 'Email'),
               keyboardType: TextInputType.emailAddress,
             ),
+            const SizedBox(height: 16),
+            if (_departments.isNotEmpty)
+              DropdownButtonFormField<int>(
+                value: _selectedDepartmentId,
+                decoration: const InputDecoration(labelText: 'Departemen'),
+                items: _departments.map((dept) => DropdownMenuItem<int>(
+                  value: dept['id'],
+                  child: Text(dept['name']),
+                )).toList(),
+                onChanged: (val) {
+                  setState(() {
+                    _selectedDepartmentId = val;
+                  });
+                },
+              ),
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,

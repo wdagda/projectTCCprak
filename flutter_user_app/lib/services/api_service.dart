@@ -27,7 +27,20 @@ class ApiService {
     String name,
     String email,
     String password,
+    {int? DepartmentId},
   ) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/auth/register'),
+      headers: await _getHeaders(),
+      body: jsonEncode({
+        'name': name,
+        'email': email,
+        'password': password,
+        if (DepartmentId != null) 'DepartmentId': DepartmentId,
+      }),
+    );
+    return _processResponse(response);
+  }
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: await _getHeaders(),
@@ -36,13 +49,33 @@ class ApiService {
     return _processResponse(response);
   }
 
-  // User Methods
+  static Future<Map<String, dynamic>> getDepartments() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/departments'),
+      headers: await _getHeaders(),
+    );
+    return _processResponse(response);
+  }
+
   static Future<Map<String, dynamic>> updateUser(
     int id,
     String name,
     String email,
     String password,
+    {int? DepartmentId},
   ) async {
+    final response = await http.put(
+      Uri.parse('$baseUrl/users/$id'),
+      headers: await _getHeaders(),
+      body: jsonEncode({
+        if (name.isNotEmpty) 'name': name,
+        if (email.isNotEmpty) 'email': email,
+        if (password.isNotEmpty) 'password': password,
+        if (DepartmentId != null) 'DepartmentId': DepartmentId,
+      }),
+    );
+    return _processResponse(response);
+  }
     final response = await http.put(
       Uri.parse('$baseUrl/users/$id'),
       headers: await _getHeaders(),

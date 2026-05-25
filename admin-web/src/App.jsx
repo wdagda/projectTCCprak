@@ -23,12 +23,21 @@ function Sidebar() {
 
 function Login({ onLogin }) {
   const [isRegister, setIsRegister] = useState(false);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState('admin');
+  const [name, setName] = useState('');
+  const [role, setRole] = useState('employee');
+  const [departmentId, setDepartmentId] = useState('');
+  const [departments, setDepartments] = useState([]);
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  useEffect(() => {
+    axios.get(`${API_URL}/departments`).then(res => {
+      setDepartments(res.data);
+      if (res.data.length > 0) setDepartmentId(res.data[0].id);
+    });
+  }, []);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -36,7 +45,7 @@ function Login({ onLogin }) {
     setSuccessMsg('');
 
     if (isRegister) {
-      axios.post(`${API_URL}/auth/register`, { name, email, password, role }).then(res => {
+      axios.post(`${API_URL}/auth/register`, { name, email, password, role, departmentId }).then(res => {
         const user = res.data.user;
         if (user.role === 'admin') {
           onLogin(user);
@@ -64,52 +73,28 @@ function Login({ onLogin }) {
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', backgroundColor: 'var(--bg-secondary)', padding: '2rem' }}>
-      <div className="card" style={{ width: '400px', padding: '2rem' }}>
-        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>{isRegister ? 'Sign Up' : 'Admin Login'}</h2>
-        {error && <div style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
-        {successMsg && <div style={{ color: 'var(--success)', marginBottom: '1rem', textAlign: 'center' }}>{successMsg}</div>}
+    <div className="login-container">
+      <form className="login-box" onSubmit={handleSubmit}>
+        <h1>{isRegister ? 'Register Admin' : 'Login Admin'}</h1>
+        {error && <p className="error">{error}</p>}
+        {successMsg && <p className="success">{successMsg}</p>}
+        <input className="form-input" placeholder="Email" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+        <input className="form-input" placeholder="Password" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
         
-        <form onSubmit={handleSubmit}>
-          {isRegister && (
-            <div className="form-group">
-              <label className="form-label">Nama Lengkap</label>
-              <input type="text" required className="form-input" value={name} onChange={e => setName(e.target.value)} />
-            </div>
-          )}
-          <div className="form-group">
-            <label className="form-label">Email</label>
-            <input type="email" required className="form-input" value={email} onChange={e => setEmail(e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <input type="password" required className="form-input" value={password} onChange={e => setPassword(e.target.value)} />
-          </div>
-          {isRegister && (
-            <div className="form-group">
-              <label className="form-label">Role Akses</label>
-              <select className="form-input" value={role} onChange={e => setRole(e.target.value)}>
-                <option value="admin">Administrator (Akses Web)</option>
-                <option value="employee">Employee (Akses Mobile)</option>
-              </select>
-            </div>
-          )}
-          <button type="submit" className="btn" style={{ width: '100%', marginBottom: '1rem' }}>
-            {isRegister ? 'Daftar Sekarang' : 'Login'}
-          </button>
-        </form>
-        
-        <div style={{ textAlign: 'center', fontSize: '0.9rem' }}>
-          {isRegister ? 'Sudah punya akun? ' : 'Belum punya akun? '}
-          <span style={{ color: 'var(--primary)', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => {
-            setIsRegister(!isRegister);
-            setError('');
-            setSuccessMsg('');
-          }}>
-            {isRegister ? 'Login di sini' : 'Sign Up'}
-          </span>
-        </div>
-      </div>
+        {isRegister && (
+          <>
+            <input className="form-input" placeholder="Nama Lengkap" value={name} onChange={e => setName(e.target.value)} required />
+            <select className="form-input" value={departmentId} onChange={e => setDepartmentId(e.target.value)}>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </>
+        )}
+
+        <button className="btn" type="submit" style={{ width: '100%' }}>{isRegister ? 'Daftar' : 'Login'}</button>
+        <p style={{ cursor: 'pointer', textAlign: 'center', marginTop: '1rem' }} onClick={() => setIsRegister(!isRegister)}>
+          {isRegister ? 'Sudah punya akun? Login' : 'Belum punya akun? Register'}
+        </p>
+      </form>
     </div>
   );
 }
