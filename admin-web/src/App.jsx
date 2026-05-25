@@ -5,14 +5,59 @@ import './index.css';
 
 const API_URL = 'http://34.128.121.83:3001/api';
 
-function Sidebar() {
+function Sidebar({ onLogout }) {
   const location = useLocation();
   return (
-    <div className="sidebar">
-      <div className="brand">Asset Admin</div>
-      <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Dashboard</Link>
-      <Link to="/assets" className={`nav-link ${location.pathname === '/assets' ? 'active' : ''}`}>Manajemen Aset</Link>
-      <Link to="/borrowings" className={`nav-link ${location.pathname === '/borrowings' ? 'active' : ''}`}>Log Peminjaman</Link>
+    <div className="sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <div>
+        <div className="brand">Asset Admin</div>
+        <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Dashboard</Link>
+        <Link to="/assets" className={`nav-link ${location.pathname === '/assets' ? 'active' : ''}`}>Manajemen Aset</Link>
+        <Link to="/borrowings" className={`nav-link ${location.pathname === '/borrowings' ? 'active' : ''}`}>Log Peminjaman</Link>
+      </div>
+      <div style={{ marginTop: 'auto', padding: '1rem' }}>
+        <button className="btn btn-danger" style={{ width: '100%' }} onClick={onLogout}>Logout</button>
+      </div>
+    </div>
+  );
+}
+
+function Login({ onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    axios.post(`${API_URL}/auth/login`, { email, password }).then(res => {
+      const user = res.data.user;
+      if (user.role !== 'admin') {
+        setError('Aplikasi ini khusus Admin. Silakan gunakan Mobile App');
+        return;
+      }
+      onLogin(user);
+    }).catch(err => {
+      setError('Login gagal. Periksa email & password.');
+    });
+  };
+
+  return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--bg-secondary)' }}>
+      <div className="card" style={{ width: '400px', padding: '2rem' }}>
+        <h2 style={{ textAlign: 'center', marginBottom: '1.5rem' }}>Admin Login</h2>
+        {error && <div style={{ color: 'red', marginBottom: '1rem', textAlign: 'center' }}>{error}</div>}
+        <form onSubmit={handleSubmit}>
+          <div className="form-group">
+            <label className="form-label">Email</label>
+            <input type="email" required className="form-input" value={email} onChange={e => setEmail(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Password</label>
+            <input type="password" required className="form-input" value={password} onChange={e => setPassword(e.target.value)} />
+          </div>
+          <button type="submit" className="btn" style={{ width: '100%' }}>Login</button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -99,6 +144,7 @@ function Dashboard() {
 function Assets() {
   const [assets, setAssets] = useState([]);
   const [users, setUsers] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [newAsset, setNewAsset] = useState({ name: '', serial_number: '', CategoryId: 1 });
   const [editingAsset, setEditingAsset] = useState(null);
@@ -108,6 +154,12 @@ function Assets() {
   useEffect(() => {
     fetchAssets();
     axios.get(`${API_URL}/users`).then(res => setUsers(res.data));
+    axios.get(`${API_URL}/categories`).then(res => {
+      setCategories(res.data);
+      if (res.data.length > 0) {
+        setNewAsset(prev => ({ ...prev, CategoryId: res.data[0].id }));
+      }
+    });
   }, []);
 
   const fetchAssets = () => {
@@ -197,6 +249,12 @@ function Assets() {
                 <label className="form-label">Serial Number</label>
                 <input className="form-input" required value={newAsset.serial_number} onChange={e => setNewAsset({ ...newAsset, serial_number: e.target.value })} />
               </div>
+              <div className="form-group">
+                <label className="form-label">Kategori</label>
+                <select className="form-input" value={newAsset.CategoryId} onChange={e => setNewAsset({ ...newAsset, CategoryId: parseInt(e.target.value) })}>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                 <button type="button" className="btn btn-danger" onClick={() => setShowModal(false)}>Batal</button>
                 <button type="submit" className="btn">Simpan</button>
@@ -251,7 +309,7 @@ function Assets() {
                 <select className="form-input" required value={selectedUserId} onChange={e => setSelectedUserId(e.target.value)}>
                   <option value="">-- Pilih --</option>
                   {users.filter(u => u.role === 'employee').map(u => (
-                    <option key={u.id} value={u.id}>{u.name} ({u.email})</option>
+                    <option key={u.id} value={u.id}>{u.name} ({u.Department?.name || 'No Dept'}) - {u.email}</option>
                   ))}
                 </select>
               </div>
@@ -306,10 +364,29 @@ function Borrowings() {
 }
 
 function App() {
+  const [adminUser, setAdminUser] = useState(() => {
+    const saved = localStorage.getItem('adminUser');
+    return saved ? JSON.parse(saved) : null;
+  });
+
+  const handleLogin = (user) => {
+    setAdminUser(user);
+    localStorage.setItem('adminUser', JSON.stringify(user));
+  };
+
+  const handleLogout = () => {
+    setAdminUser(null);
+    localStorage.removeItem('adminUser');
+  };
+
+  if (!adminUser) {
+    return <Login onLogin={handleLogin} />;
+  }
+
   return (
     <BrowserRouter>
       <div className="app-container">
-        <Sidebar />
+        <Sidebar onLogout={handleLogout} />
         <div className="main-content">
           <Routes>
             <Route path="/" element={<Dashboard />} />

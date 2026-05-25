@@ -83,6 +83,6 @@ Backend mengekspos beberapa endpoint di bawah awalan (prefix) `/api`:
 - **Log Peminjaman:** `GET`, `POST`, `PUT` pada `/api/borrowings` dan `/api/borrowings/user/:id`
 - **Dokumen Serah Terima (NoSQL):** `POST` pada `/api/borrowings/:id/handover`
 
-## 📝 Lisensi
+## link
 
-Proyek ini dilisensikan di bawah ISC License.
+http://praktcc-admin-web.storage.googleapis.com/index.html#/

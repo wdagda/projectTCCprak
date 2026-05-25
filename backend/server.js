@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const { sequelize } = require('./models');
-const { AssetCondition, HandoverDocument } = require('./nosql');
+const { AssetCondition, HandoverDocument, ActivityLog, MaintenanceRecord, NotificationHistory } = require('./nosql');
 const models = require('./models');
 
 const app = express();
@@ -11,8 +11,17 @@ app.use(express.json());
 // Sync SQL DB
 sequelize.sync().then(async () => {
   console.log('SQL Database synced');
+  
+  const { User, Department, Category } = require('./models');
+
+  // Seed default department if none exists
+  let defaultDept = await Department.findByPk(1);
+  if (!defaultDept) {
+    defaultDept = await Department.create({ name: 'IT Support' });
+    console.log('Created default department (IT Support)');
+  }
+
   // Seed default admin if none exists
-  const { User } = require('./models');
   const admin = await User.findOne({ where: { email: 'admin@example.com' } });
   if (!admin) {
     await User.create({
@@ -20,12 +29,12 @@ sequelize.sync().then(async () => {
       email: 'admin@example.com',
       password: 'admin123',
       role: 'admin',
+      DepartmentId: defaultDept.id
     });
     console.log('Created default admin user (admin@example.com / admin123)');
   }
 
   // Seed default category if none exists
-  const { Category } = require('./models');
   const category = await Category.findByPk(1);
   if (!category) {
     await Category.create({ name: 'General', description: 'Kategori Umum' });
@@ -83,6 +92,17 @@ app.put('/api/categories/:id', async (req, res) => {
   res.json({ success: true });
 });
 
+// --- DEPARTMENTS ---
+app.get('/api/departments', async (req, res) => {
+  const depts = await models.Department.findAll();
+  res.json(depts);
+});
+
+app.post('/api/departments', async (req, res) => {
+  const dept = await models.Department.create(req.body);
+  res.json(dept);
+});
+
 // 9. POST /api/assets/:id/conditions (NoSQL)
 app.post('/api/assets/:id/conditions', (req, res) => {
   const data = { ...req.body, asset_id: req.params.id, timestamp: new Date() };
@@ -101,8 +121,13 @@ app.get('/api/assets/:id/conditions', (req, res) => {
 // 11. POST /api/auth/login
 app.post('/api/auth/login', async (req, res) => {
   const { email, password } = req.body;
-  const user = await models.User.findOne({ where: { email, password } });
+  const user = await models.User.findOne({ 
+    where: { email, password },
+    include: [models.Department] 
+  });
   if (user) {
+    // Basic Activity Log
+    ActivityLog.insert({ action: 'login', user_id: user.id, user_email: user.email, timestamp: new Date() });
     res.json({ success: true, user });
   } else {
     res.status(401).json({ error: 'Invalid credentials' });
@@ -112,7 +137,7 @@ app.post('/api/auth/login', async (req, res) => {
 // 11b. POST /api/auth/register
 app.post('/api/auth/register', async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    const { name, email, password, DepartmentId } = req.body;
     if (!name || !email || !password) {
       return res.status(400).json({ error: 'All fields are required' });
     }
@@ -120,7 +145,9 @@ app.post('/api/auth/register', async (req, res) => {
     if (existing) {
       return res.status(400).json({ error: 'Email already exists' });
     }
-    const user = await models.User.create({ name, email, password, role: 'employee' });
+    const deptId = DepartmentId || 1; // fallback to default
+    const user = await models.User.create({ name, email, password, role: 'employee', DepartmentId: deptId });
+    ActivityLog.insert({ action: 'register', user_id: user.id, user_email: user.email, timestamp: new Date() });
     res.json({ success: true, user });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -129,7 +156,7 @@ app.post('/api/auth/register', async (req, res) => {
 
 // 12. GET /api/users
 app.get('/api/users', async (req, res) => {
-  const users = await models.User.findAll();
+  const users = await models.User.findAll({ include: [models.Department] });
   res.json(users);
 });
 
@@ -199,6 +226,50 @@ app.post('/api/borrowings/:id/handover', (req, res) => {
 app.get('/api/borrowings/user/:id', async (req, res) => {
   const logs = await models.BorrowingLog.findAll({ where: { user_id: req.params.id }, include: [models.Asset] });
   res.json(logs);
+});
+
+// --- NEW NOSQL ROUTES ---
+
+// 18. GET /api/activity-logs
+app.get('/api/activity-logs', (req, res) => {
+  ActivityLog.find({}).sort({ timestamp: -1 }).exec((err, docs) => {
+    res.json(docs);
+  });
+});
+
+// 19. POST /api/activity-logs
+app.post('/api/activity-logs', (req, res) => {
+  ActivityLog.insert({ ...req.body, timestamp: new Date() }, (err, newDoc) => {
+    res.json(newDoc);
+  });
+});
+
+// 20. GET /api/maintenance-records
+app.get('/api/maintenance-records', (req, res) => {
+  MaintenanceRecord.find({}).sort({ timestamp: -1 }).exec((err, docs) => {
+    res.json(docs);
+  });
+});
+
+// 21. POST /api/maintenance-records
+app.post('/api/maintenance-records', (req, res) => {
+  MaintenanceRecord.insert({ ...req.body, timestamp: new Date() }, (err, newDoc) => {
+    res.json(newDoc);
+  });
+});
+
+// 22. GET /api/notifications
+app.get('/api/notifications', (req, res) => {
+  NotificationHistory.find({}).sort({ timestamp: -1 }).exec((err, docs) => {
+    res.json(docs);
+  });
+});
+
+// 23. POST /api/notifications
+app.post('/api/notifications', (req, res) => {
+  NotificationHistory.insert({ ...req.body, timestamp: new Date() }, (err, newDoc) => {
+    res.json(newDoc);
+  });
 });
 
 const PORT = 3001;
