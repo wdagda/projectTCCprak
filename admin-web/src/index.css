@@ -38,7 +38,7 @@ body {
   background-color: var(--bg-card);
   padding: 2rem;
   border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   width: 100%;
   max-width: 400px;
 }
@@ -89,7 +89,8 @@ body {
   cursor: pointer;
 }
 
-.nav-link:hover, .nav-link.active {
+.nav-link:hover,
+.nav-link.active {
   background: rgba(59, 130, 246, 0.1);
   color: var(--accent);
 }
@@ -160,7 +161,8 @@ table {
   margin-top: 1rem;
 }
 
-th, td {
+th,
+td {
   padding: 1rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
@@ -186,12 +188,35 @@ tr:hover {
   text-transform: capitalize;
 }
 
-.status-available { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-.status-borrowed { background: rgba(59, 130, 246, 0.2); color: var(--accent); }
-.status-maintenance { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-.status-pending { background: rgba(245, 158, 11, 0.2); color: #f59e0b; }
-.status-returned { background: rgba(16, 185, 129, 0.2); color: var(--success); }
-.status-rejected { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+.status-available {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.status-borrowed {
+  background: rgba(59, 130, 246, 0.2);
+  color: var(--accent);
+}
+
+.status-maintenance {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.status-pending {
+  background: rgba(245, 158, 11, 0.2);
+  color: #f59e0b;
+}
+
+.status-returned {
+  background: rgba(16, 185, 129, 0.2);
+  color: var(--success);
+}
+
+.status-rejected {
+  background: rgba(239, 68, 68, 0.2);
+  color: var(--danger);
+}
 
 /* Forms */
 .form-group {
@@ -207,7 +232,7 @@ tr:hover {
 
 .form-input {
   width: 100%;
-  background-color: rgba(0,0,0,0.2);
+  background-color: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border);
   color: var(--text-primary);
   padding: 0.75rem 1rem;
@@ -223,7 +248,10 @@ tr:hover {
 
 .modal-overlay {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(15, 23, 42, 0.8);
   backdrop-filter: blur(4px);
   display: flex;
@@ -243,5 +271,24 @@ tr:hover {
   animation: slideUp 0.3s ease;
 }
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}

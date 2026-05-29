@@ -9,8 +9,8 @@ function Sidebar() {
   const location = useLocation();
   return (
     <div className="sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div>
-        <div className="brand">Asset Admin</div>
+      <div className="brand">Asset Admin</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Dashboard</Link>
         <Link to="/assets" className={`nav-link ${location.pathname === '/assets' ? 'active' : ''}`}>Manajemen Aset</Link>
         <Link to="/borrowings" className={`nav-link ${location.pathname === '/borrowings' ? 'active' : ''}`}>Log Peminjaman</Link>
