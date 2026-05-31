@@ -15,27 +15,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-  List<Map<String, dynamic>> _departments = [];
-  int? _selectedDepartmentId;
+  final _departmentIdController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loadDepartments();
-  }
-
-  Future<void> _loadDepartments() async {
-    try {
-      final data = await ApiService.getDepartments();
-      setState(() {
-        _departments = List<Map<String, dynamic>>.from(data['departments'] ?? data);
-        if (_departments.isNotEmpty) {
-          _selectedDepartmentId = _departments.first['id'];
-        }
-      });
-    } catch (e) {
-      // ignore errors for now
-    }
   }
 
   Future<void> _register() async {
@@ -54,11 +38,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
+      final deptId = int.tryParse(_departmentIdController.text.trim());
       final data = await ApiService.register(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
-        DepartmentId: _selectedDepartmentId,
+        DepartmentId: deptId,
       );
       
       final user = data['user'];
@@ -130,20 +115,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: true,
                 ),
                 const SizedBox(height: 16),
-                if (_departments.isNotEmpty)
-                  DropdownButtonFormField<int>(
-                    value: _selectedDepartmentId,
-                    decoration: const InputDecoration(labelText: 'Departemen'),
-                    items: _departments.map((dept) => DropdownMenuItem<int>(
-                      value: dept['id'],
-                      child: Text(dept['name']),
-                    )).toList(),
-                    onChanged: (val) {
-                      setState(() {
-                        _selectedDepartmentId = val;
-                      });
-                    },
-                  ),
+                TextField(
+                  controller: _departmentIdController,
+                  decoration: const InputDecoration(labelText: 'ID Departemen (Opsional)'),
+                  keyboardType: TextInputType.number,
+                ),
                 const SizedBox(height: 32),
                 
                 ElevatedButton(

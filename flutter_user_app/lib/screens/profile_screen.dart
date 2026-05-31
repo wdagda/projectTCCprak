@@ -16,27 +16,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
+  late TextEditingController _departmentIdController;
+
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.user['name']);
     _emailController = TextEditingController(text: widget.user['email']);
-    _selectedDepartmentId = widget.user['DepartmentId'];
-    _loadDepartments();
-  }
-
-  List<Map<String, dynamic>> _departments = [];
-  int? _selectedDepartmentId;
-
-  Future<void> _loadDepartments() async {
-    try {
-      final data = await ApiService.getDepartments();
-      setState(() {
-        _departments = List<Map<String, dynamic>>.from(data['departments'] ?? data);
-      });
-    } catch (e) {
-      // ignore errors for now
-    }
+    _departmentIdController = TextEditingController(
+      text: widget.user['DepartmentId'] != null ? widget.user['DepartmentId'].toString() : '',
+    );
   }
 
   String _getInitials(String name) {
@@ -49,12 +38,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _updateProfile() async {
     setState(() => _isLoading = true);
     try {
+      final deptId = int.tryParse(_departmentIdController.text.trim());
       final data = await ApiService.updateUser(
         widget.user['id'],
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
-        DepartmentId: _selectedDepartmentId,
+        DepartmentId: deptId,
       );
       
       final updatedUser = data['user'];
@@ -105,20 +95,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
-            if (_departments.isNotEmpty)
-              DropdownButtonFormField<int>(
-                value: _selectedDepartmentId,
-                decoration: const InputDecoration(labelText: 'Departemen'),
-                items: _departments.map((dept) => DropdownMenuItem<int>(
-                  value: dept['id'],
-                  child: Text(dept['name']),
-                )).toList(),
-                onChanged: (val) {
-                  setState(() {
-                    _selectedDepartmentId = val;
-                  });
-                },
-              ),
+            TextField(
+              controller: _departmentIdController,
+              decoration: const InputDecoration(labelText: 'ID Departemen'),
+              keyboardType: TextInputType.number,
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,

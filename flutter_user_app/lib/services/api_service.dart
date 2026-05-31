@@ -26,9 +26,9 @@ class ApiService {
   static Future<Map<String, dynamic>> register(
     String name,
     String email,
-    String password,
-    {int? DepartmentId},
-  ) async {
+    String password, {
+    int? DepartmentId,
+  }) async {
     final response = await http.post(
       Uri.parse('$baseUrl/auth/register'),
       headers: await _getHeaders(),
@@ -38,13 +38,6 @@ class ApiService {
         'password': password,
         if (DepartmentId != null) 'DepartmentId': DepartmentId,
       }),
-    );
-    return _processResponse(response);
-  }
-    final response = await http.post(
-      Uri.parse('$baseUrl/auth/register'),
-      headers: await _getHeaders(),
-      body: jsonEncode({'name': name, 'email': email, 'password': password}),
     );
     return _processResponse(response);
   }
@@ -61,9 +54,9 @@ class ApiService {
     int id,
     String name,
     String email,
-    String password,
-    {int? DepartmentId},
-  ) async {
+    String password, {
+    int? DepartmentId,
+  }) async {
     final response = await http.put(
       Uri.parse('$baseUrl/users/$id'),
       headers: await _getHeaders(),
@@ -72,17 +65,6 @@ class ApiService {
         if (email.isNotEmpty) 'email': email,
         if (password.isNotEmpty) 'password': password,
         if (DepartmentId != null) 'DepartmentId': DepartmentId,
-      }),
-    );
-    return _processResponse(response);
-  }
-    final response = await http.put(
-      Uri.parse('$baseUrl/users/$id'),
-      headers: await _getHeaders(),
-      body: jsonEncode({
-        if (name.isNotEmpty) 'name': name,
-        if (email.isNotEmpty) 'email': email,
-        if (password.isNotEmpty) 'password': password,
       }),
     );
     return _processResponse(response);

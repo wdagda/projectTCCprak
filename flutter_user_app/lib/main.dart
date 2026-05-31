@@ -14,16 +14,30 @@ class ITManagementApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'IT Management App',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1), // Primary color matching web
-          brightness: Brightness.light,
+      themeMode: ThemeMode.dark, // Force dark mode to match web
+      theme: ThemeData.dark(useMaterial3: true).copyWith(
+        scaffoldBackgroundColor: const Color(0xFF221C1F),
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF221C1F),
+          foregroundColor: Color(0xFFFFB6C1),
+          elevation: 0,
         ),
-        useMaterial3: true,
+        cardTheme: const CardThemeData(
+          color: Color(0xFF2D262A),
+          elevation: 2,
+        ),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFFFB6C1),
+          secondary: Color(0xFFF48FB1),
+          surface: Color(0xFF2D262A),
+          error: Color(0xFFFFB3B3),
+          onPrimary: Color(0xFF221C1F),
+          onSurface: Color(0xFFFFF0F5),
+        ),
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF6366F1),
-            foregroundColor: Colors.white,
+            backgroundColor: const Color(0xFFFFB6C1),
+            foregroundColor: const Color(0xFF221C1F),
             padding: const EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -31,18 +45,23 @@ class ITManagementApp extends StatelessWidget {
           ),
         ),
         inputDecorationTheme: InputDecorationTheme(
+          fillColor: const Color(0xFF2D262A),
+          filled: true,
+          labelStyle: const TextStyle(color: Color(0xFFB3A0A8)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF42373D)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF42373D)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFFFB6C1)),
           ),
           contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         ),
-      ),
-      darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF6366F1),
-          brightness: Brightness.dark,
-        ),
-        useMaterial3: true,
       ),
       home: const AuthWrapper(),
       debugShowCheckedModeBanner: false,
