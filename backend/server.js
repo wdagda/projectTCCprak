@@ -186,13 +186,20 @@ app.put('/api/users/:id', async (req, res) => {
 
 // 13. POST /api/borrowings
 app.post('/api/borrowings', async (req, res) => {
-  const log = await models.BorrowingLog.create({ status: req.body.status || 'pending' });
-  if (req.body.user_id) await log.setUser(req.body.user_id);
-  if (req.body.asset_id) {
-    await log.setAsset(req.body.asset_id);
-    await models.Asset.update({ status: 'pending' }, { where: { id: req.body.asset_id } });
+  try {
+    const log = await models.BorrowingLog.create({ 
+      status: req.body.status || 'pending',
+      return_date: req.body.return_date || null
+    });
+    if (req.body.user_id) await log.setUser(req.body.user_id);
+    if (req.body.asset_id) {
+      await log.setAsset(req.body.asset_id);
+      await models.Asset.update({ status: 'pending' }, { where: { id: req.body.asset_id } });
+    }
+    res.json(log);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  res.json(log);
 });
 
 // 14. GET /api/borrowings
