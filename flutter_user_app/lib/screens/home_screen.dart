@@ -14,18 +14,29 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late Map<String, dynamic> _currentUser;
+  
+  // Borrowings State
   List<dynamic> _borrowings = [];
-  bool _isLoading = true;
+  bool _isLoadingBorrowings = true;
+
+  // Catalog State
+  List<dynamic> _assets = [];
+  List<dynamic> _categories = [];
+  int? _selectedCategoryId;
+  bool _isLoadingCatalog = true;
+
+  int _currentIndex = 0;
 
   @override
   void initState() {
     super.initState();
     _currentUser = widget.user;
     _fetchBorrowings();
+    _fetchCatalog();
   }
 
   Future<void> _fetchBorrowings() async {
-    setState(() => _isLoading = true);
+    setState(() => _isLoadingBorrowings = true);
     try {
       final list = await ApiService.getUserBorrowings(_currentUser['id']);
       setState(() {
@@ -33,12 +44,28 @@ class _HomeScreenState extends State<HomeScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Gagal memuat data: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat data peminjaman: $e')));
       }
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isLoadingBorrowings = false);
+    }
+  }
+
+  Future<void> _fetchCatalog() async {
+    setState(() => _isLoadingCatalog = true);
+    try {
+      final assets = await ApiService.getAssets();
+      final categories = await ApiService.getCategories();
+      setState(() {
+        _assets = assets.where((a) => a['status'] == 'available').toList();
+        _categories = categories;
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal memuat katalog: $e')));
+      }
+    } finally {
+      setState(() => _isLoadingCatalog = false);
     }
   }
 
@@ -88,9 +115,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _fetchBorrowings();
     } catch (e) {
       Navigator.pop(context); // close dialog
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
@@ -101,14 +126,8 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Kembalikan Perangkat'),
         content: const Text('Yakin ingin mengembalikan perangkat ini?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Ya'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Batal')),
+          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Ya')),
         ],
       ),
     );
@@ -127,38 +146,234 @@ class _HomeScreenState extends State<HomeScreen> {
           const SnackBar(content: Text('Perangkat berhasil dikembalikan!')),
         );
         _fetchBorrowings();
+        _fetchCatalog(); // Refresh catalog since asset might be available again
       } catch (e) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
       }
     }
   }
 
+  Future<void> _requestBorrow(int assetId) async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now().add(const Duration(days: 1)),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+      helpText: 'Pilih Tanggal Pengembalian',
+    );
+    if (picked != null) {
+      try {
+        showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+        await ApiService.requestBorrowing(_currentUser['id'], assetId, picked.toIso8601String());
+        if (!mounted) return;
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Berhasil mengajukan peminjaman')));
+        _fetchCatalog();
+        _fetchBorrowings();
+        setState(() {
+          _currentIndex = 0; // Go to borrowings tab
+        });
+      } catch (e) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
+  }
+
+  Widget _buildBorrowingsView() {
+    int activeCount = _borrowings.where((b) => b['status'] == 'active').length;
+    int pendingCount = _borrowings.where((b) => b['status'] == 'pending').length;
+
+    return RefreshIndicator(
+      onRefresh: _fetchBorrowings,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Card(
+                    color: Theme.of(context).colorScheme.primaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Text('$activeCount', style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Theme.of(context).colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold)),
+                          Text('Dipinjam', style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Card(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        children: [
+                          Text('$pendingCount', style: Theme.of(context).textTheme.headlineMedium?.copyWith(color: Theme.of(context).colorScheme.onSecondaryContainer, fontWeight: FontWeight.bold)),
+                          Text('Menunggu', style: TextStyle(color: Theme.of(context).colorScheme.onSecondaryContainer)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            const Text('Daftar Perangkat Saya', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 16),
+
+            if (_isLoadingBorrowings)
+              const Center(child: Padding(padding: EdgeInsets.all(32.0), child: CircularProgressIndicator()))
+            else if (_borrowings.isEmpty)
+              const Center(child: Padding(padding: EdgeInsets.all(32.0), child: Text('Belum ada perangkat yang dipinjam.')))
+            else
+              ..._borrowings.map((log) {
+                final asset = log['Asset'] ?? {};
+                final status = log['status'];
+
+                Color statusColor = Colors.grey;
+                String statusText = 'Selesai';
+                if (status == 'pending') {
+                  statusColor = Colors.orange;
+                  statusText = 'Menunggu';
+                } else if (status == 'approved') {
+                  statusColor = Colors.blue;
+                  statusText = 'Disetujui';
+                } else if (status == 'active') {
+                  statusColor = Colors.green;
+                  statusText = 'Aktif';
+                }
+
+                return Card(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(child: Text(asset['name'] ?? 'Unknown Asset', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+                              child: Text(statusText, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text('Tgl Pinjam: ${log['borrow_date'] != null ? DateTime.parse(log['borrow_date']).toLocal().toString().split(' ')[0] : '-'}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                        if (log['return_date'] != null)
+                          Text('Tgl Kembali: ${DateTime.parse(log['return_date']).toLocal().toString().split(' ')[0]}', style: TextStyle(color: Colors.grey[600], fontSize: 13)),
+                        if (status == 'pending')
+                          const Padding(
+                            padding: EdgeInsets.only(top: 12.0),
+                            child: ElevatedButton(onPressed: null, child: Text('Menunggu Persetujuan Admin')),
+                          ),
+                        if (status == 'approved')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12.0),
+                            child: ElevatedButton(onPressed: () => _confirmHandover(log['id']), child: const Text('Konfirmasi Terima')),
+                          ),
+                        if (status == 'active')
+                          Padding(
+                            padding: const EdgeInsets.only(top: 12.0),
+                            child: OutlinedButton(
+                              onPressed: () => _returnAsset(log['id']),
+                              style: OutlinedButton.styleFrom(foregroundColor: Colors.red, side: const BorderSide(color: Colors.red)),
+                              child: const Text('Kembalikan Perangkat'),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCatalogView() {
+    List<dynamic> displayedAssets = _assets;
+    if (_selectedCategoryId != null) {
+      displayedAssets = _assets.where((a) => a['CategoryId'] == _selectedCategoryId).toList();
+    }
+
+    return RefreshIndicator(
+      onRefresh: _fetchCatalog,
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            color: Theme.of(context).colorScheme.surface,
+            child: DropdownButtonFormField<int>(
+              value: _selectedCategoryId,
+              decoration: const InputDecoration(
+                labelText: 'Filter Kategori',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: [
+                const DropdownMenuItem<int>(value: null, child: Text('Semua Kategori')),
+                ..._categories.map<DropdownMenuItem<int>>((cat) {
+                  return DropdownMenuItem<int>(value: cat['id'], child: Text(cat['name']));
+                }),
+              ],
+              onChanged: (val) {
+                setState(() {
+                  _selectedCategoryId = val;
+                });
+              },
+            ),
+          ),
+          Expanded(
+            child: _isLoadingCatalog
+                ? const Center(child: CircularProgressIndicator())
+                : displayedAssets.isEmpty
+                    ? const Center(child: Text('Tidak ada aset yang tersedia.'))
+                    : ListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        itemCount: displayedAssets.length,
+                        itemBuilder: (context, index) {
+                          final asset = displayedAssets[index];
+                          return Card(
+                            margin: const EdgeInsets.only(bottom: 12),
+                            child: ListTile(
+                              title: Text(asset['name'], style: const TextStyle(fontWeight: FontWeight.bold)),
+                              subtitle: Text(asset['Category']?['name'] ?? 'Tanpa Kategori'),
+                              trailing: ElevatedButton(
+                                onPressed: () => _requestBorrow(asset['id']),
+                                child: const Text('Pinjam'),
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    int activeCount = _borrowings.where((b) => b['status'] == 'active').length;
-    int pendingCount = _borrowings
-        .where((b) => b['status'] == 'pending')
-        .length;
-
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'IT Management App',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            Text(
-              'Halo, ${_currentUser['name'].split(' ')[0]}',
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.normal,
-              ),
-            ),
+            const Text('IT Management App', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text('Halo, ${_currentUser['name'].split(' ')[0]}', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.normal)),
           ],
         ),
         actions: [
@@ -166,214 +381,20 @@ class _HomeScreenState extends State<HomeScreen> {
             onTap: _goToProfile,
             child: CircleAvatar(
               backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-              child: Text(
-                _getInitials(_currentUser['name']),
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimaryContainer,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
+              child: Text(_getInitials(_currentUser['name']), style: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold)),
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: _handleLogout,
-            tooltip: 'Logout',
-          ),
+          IconButton(icon: const Icon(Icons.logout), onPressed: _handleLogout, tooltip: 'Logout'),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: _fetchBorrowings,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Card(
-                      color: Theme.of(context).colorScheme.primaryContainer,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Text(
-                              '$activeCount',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onPrimaryContainer,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            Text(
-                              'Dipinjam',
-                              style: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onPrimaryContainer,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Card(
-                      color: Theme.of(context).colorScheme.secondaryContainer,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          children: [
-                            Text(
-                              '$pendingCount',
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.onSecondaryContainer,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                            ),
-                            Text(
-                              'Menunggu',
-                              style: TextStyle(
-                                color: Theme.of(
-                                  context,
-                                ).colorScheme.onSecondaryContainer,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Daftar Perangkat Saya',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
-              if (_isLoading)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: CircularProgressIndicator(),
-                  ),
-                )
-              else if (_borrowings.isEmpty)
-                const Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(32.0),
-                    child: Text('Belum ada perangkat yang dipinjam.'),
-                  ),
-                )
-              else
-                ..._borrowings.map((log) {
-                  final asset = log['Asset'] ?? {};
-                  final status = log['status'];
-
-                  Color statusColor = Colors.grey;
-                  String statusText = 'Selesai';
-                  if (status == 'pending') {
-                    statusColor = Colors.orange;
-                    statusText = 'Menunggu';
-                  } else if (status == 'active') {
-                    statusColor = Colors.green;
-                    statusText = 'Aktif';
-                  }
-
-                  return Card(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  asset['name'] ?? 'Unknown Asset',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                              ),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  statusText,
-                                  style: TextStyle(
-                                    color: statusColor,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Tgl Pinjam: ${log['borrow_date'] != null ? DateTime.parse(log['borrow_date']).toLocal().toString().split(' ')[0] : '-'}',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 13,
-                            ),
-                          ),
-                          if (log['return_date'] != null)
-                            Text(
-                              'Tgl Kembali: ${DateTime.parse(log['return_date']).toLocal().toString().split(' ')[0]}',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 13,
-                              ),
-                            ),
-
-                          if (status == 'pending')
-                            Padding(
-                              padding: const EdgeInsets.only(top: 12.0),
-                              child: ElevatedButton(
-                                onPressed: () => _confirmHandover(log['id']),
-                                child: const Text('Konfirmasi Terima'),
-                              ),
-                            ),
-                          if (status == 'active')
-                            Padding(
-                              padding: const EdgeInsets.only(top: 12.0),
-                              child: OutlinedButton(
-                                onPressed: () => _returnAsset(log['id']),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.red,
-                                  side: const BorderSide(color: Colors.red),
-                                ),
-                                child: const Text('Kembalikan Perangkat'),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-            ],
-          ),
-        ),
+      body: _currentIndex == 0 ? _buildBorrowingsView() : _buildCatalogView(),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _currentIndex,
+        onTap: (index) => setState(() => _currentIndex = index),
+        items: const [
+          BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'Pinjamanku'),
+          BottomNavigationBarItem(icon: Icon(Icons.devices), label: 'Katalog'),
+        ],
       ),
     );
   }

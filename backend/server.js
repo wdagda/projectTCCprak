@@ -229,6 +229,13 @@ app.post('/api/borrowings/:id/handover', (req, res) => {
   });
 });
 
+// 16b. GET /api/handover-docs (NoSQL)
+app.get('/api/handover-docs', (req, res) => {
+  HandoverDocument.find({}).sort({ timestamp: -1 }).exec((err, docs) => {
+    res.json(docs);
+  });
+});
+
 // 17. GET /api/borrowings/user/:id
 app.get('/api/borrowings/user/:id', async (req, res) => {
   const logs = await models.BorrowingLog.findAll({ where: { user_id: req.params.id }, include: [models.Asset] });

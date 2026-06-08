@@ -15,11 +15,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-  final _departmentIdController = TextEditingController();
+  int? _selectedDepartmentId;
+  List<dynamic> _departments = [];
 
   @override
   void initState() {
     super.initState();
+    _fetchDepartments();
+  }
+
+  Future<void> _fetchDepartments() async {
+    try {
+      final depts = await ApiService.getDepartments();
+      setState(() {
+        _departments = depts;
+      });
+    } catch (e) {
+      debugPrint('Failed to fetch departments: $e');
+    }
   }
 
   Future<void> _register() async {
@@ -38,12 +51,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      final deptId = int.tryParse(_departmentIdController.text.trim());
       final data = await ApiService.register(
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
-        DepartmentId: deptId,
+        DepartmentId: _selectedDepartmentId,
       );
       
       final user = data['user'];
@@ -115,10 +127,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: true,
                 ),
                 const SizedBox(height: 16),
-                TextField(
-                  controller: _departmentIdController,
-                  decoration: const InputDecoration(labelText: 'ID Departemen (Opsional)'),
-                  keyboardType: TextInputType.number,
+                DropdownButtonFormField<int>(
+                  value: _selectedDepartmentId,
+                  decoration: const InputDecoration(labelText: 'Departemen (Opsional)'),
+                  items: _departments.map<DropdownMenuItem<int>>((dept) {
+                    return DropdownMenuItem<int>(
+                      value: dept['id'],
+                      child: Text(dept['name']),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _selectedDepartmentId = val;
+                    });
+                  },
                 ),
                 const SizedBox(height: 32),
                 

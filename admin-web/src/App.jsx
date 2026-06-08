@@ -40,6 +40,7 @@ function Sidebar({ adminUser }) {
         <Link to="/departments" className={`nav-link ${location.pathname === '/departments' ? 'active' : ''}`}>Departemen</Link>
         <Link to="/borrowings" className={`nav-link ${location.pathname === '/borrowings' ? 'active' : ''}`}>Log Peminjaman</Link>
         <Link to="/users" className={`nav-link ${location.pathname === '/users' ? 'active' : ''}`}>Daftar Pengguna</Link>
+        <Link to="/nosql" className={`nav-link ${location.pathname === '/nosql' ? 'active' : ''}`}>Aktivitas (NeDB)</Link>
         <Link to="/account" className={`nav-link ${location.pathname === '/account' ? 'active' : ''}`}>Akun Saya</Link>
       </div>
     </div>
@@ -428,9 +429,19 @@ function Assets() {
 function Borrowings() {
   const [logs, setLogs] = useState([]);
 
-  useEffect(() => {
+  const fetchLogs = () => {
     axios.get(`${API_URL}/borrowings`).then(res => setLogs(res.data));
+  };
+
+  useEffect(() => {
+    fetchLogs();
   }, []);
+
+  const updateStatus = (id, newStatus) => {
+    axios.put(`${API_URL}/borrowings/${id}/status`, { status: newStatus })
+      .then(() => fetchLogs())
+      .catch(err => alert('Gagal update status: ' + err.message));
+  };
 
   return (
     <div>
@@ -444,6 +455,7 @@ function Borrowings() {
               <th>Karyawan ID</th>
               <th>Status</th>
               <th>Tgl Pinjam</th>
+              <th>Aksi</th>
             </tr>
           </thead>
           <tbody>
@@ -454,6 +466,19 @@ function Borrowings() {
                 <td>{log.User?.name || log.user_id}</td>
                 <td><span className={`status-badge status-${log.status}`}>{log.status}</span></td>
                 <td>{new Date(log.borrow_date).toLocaleDateString()}</td>
+                <td>
+                  <select 
+                    value={log.status} 
+                    onChange={e => updateStatus(log.id, e.target.value)}
+                    style={{ padding: '4px', borderRadius: '4px', border: '1px solid #ccc' }}
+                  >
+                    <option value="pending">Menunggu</option>
+                    <option value="approved">Disetujui</option>
+                    <option value="active">Aktif</option>
+                    <option value="returned">Selesai</option>
+                    <option value="lost">Hilang</option>
+                  </select>
+                </td>
               </tr>
             ))}
           </tbody>
@@ -771,6 +796,72 @@ function Departments() {
   );
 }
 
+function NoSqlLogs() {
+  const [activityLogs, setActivityLogs] = useState([]);
+  const [handoverDocs, setHandoverDocs] = useState([]);
+
+  useEffect(() => {
+    axios.get(`${API_URL}/activity-logs`).then(res => setActivityLogs(res.data));
+    axios.get(`${API_URL}/handover-docs`).then(res => setHandoverDocs(res.data));
+  }, []);
+
+  return (
+    <div>
+      <h1 className="page-title">Data NoSQL (NeDB)</h1>
+      
+      <h2 style={{ marginBottom: '1rem' }}>Log Aktivitas</h2>
+      <div className="card table-container" style={{ marginBottom: '2rem' }}>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Action</th>
+              <th>User ID</th>
+              <th>User Email</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {activityLogs.map(log => (
+              <tr key={log._id}>
+                <td>{log._id}</td>
+                <td><span className="status-badge status-active">{log.action}</span></td>
+                <td>{log.user_id}</td>
+                <td>{log.user_email}</td>
+                <td>{new Date(log.timestamp).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <h2 style={{ marginBottom: '1rem' }}>Dokumen Serah Terima</h2>
+      <div className="card table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>Document ID</th>
+              <th>Borrow Log ID</th>
+              <th>Terms Agreed</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {handoverDocs.map(doc => (
+              <tr key={doc._id}>
+                <td>{doc._id}</td>
+                <td>#{doc.borrow_log_id}</td>
+                <td>{doc.terms_agreed ? 'Yes' : 'No'}</td>
+                <td>{new Date(doc.timestamp).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [adminUser, setAdminUser] = useState(() => {
     const saved = localStorage.getItem('adminUser');
@@ -803,6 +894,7 @@ function App() {
             <Route path="/departments" element={<Departments />} />
             <Route path="/borrowings" element={<Borrowings />} />
             <Route path="/users" element={<Users />} />
+            <Route path="/nosql" element={<NoSqlLogs />} />
             <Route path="/account" element={<Account adminUser={adminUser} setAdminUser={setAdminUser} onLogout={handleLogout} />} />
           </Routes>
         </div>

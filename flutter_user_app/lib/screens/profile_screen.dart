@@ -16,16 +16,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
 
-  late TextEditingController _departmentIdController;
+  int? _selectedDepartmentId;
+  List<dynamic> _departments = [];
+  bool _isFetchingDepartments = true;
 
   @override
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.user['name']);
     _emailController = TextEditingController(text: widget.user['email']);
-    _departmentIdController = TextEditingController(
-      text: widget.user['DepartmentId'] != null ? widget.user['DepartmentId'].toString() : '',
-    );
+    _selectedDepartmentId = widget.user['DepartmentId'];
+    _fetchDepartments();
+  }
+
+  Future<void> _fetchDepartments() async {
+    setState(() => _isFetchingDepartments = true);
+    try {
+      final depts = await ApiService.getDepartments();
+      setState(() {
+        _departments = depts;
+        // Verify if selected ID still exists in the fetched list
+        if (_selectedDepartmentId != null) {
+          final exists = depts.any((d) => d['id'] == _selectedDepartmentId);
+          if (!exists) _selectedDepartmentId = null;
+        }
+      });
+    } catch (e) {
+      debugPrint('Failed to fetch departments: $e');
+    } finally {
+      setState(() => _isFetchingDepartments = false);
+    }
   }
 
   String _getInitials(String name) {
@@ -38,13 +58,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _updateProfile() async {
     setState(() => _isLoading = true);
     try {
-      final deptId = int.tryParse(_departmentIdController.text.trim());
       final data = await ApiService.updateUser(
         widget.user['id'],
         _nameController.text.trim(),
         _emailController.text.trim(),
         _passwordController.text,
-        DepartmentId: deptId,
+        DepartmentId: _selectedDepartmentId,
       );
       
       final updatedUser = data['user'];
@@ -95,11 +114,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               keyboardType: TextInputType.emailAddress,
             ),
             const SizedBox(height: 16),
-            TextField(
-              controller: _departmentIdController,
-              decoration: const InputDecoration(labelText: 'ID Departemen'),
-              keyboardType: TextInputType.number,
-            ),
+            _isFetchingDepartments
+                ? const Center(child: CircularProgressIndicator())
+                : DropdownButtonFormField<int>(
+                    value: _selectedDepartmentId,
+                    decoration: const InputDecoration(labelText: 'Departemen'),
+                    items: [
+                      const DropdownMenuItem<int>(
+                        value: null,
+                        child: Text('-- Pilih Departemen --'),
+                      ),
+                      ..._departments.map<DropdownMenuItem<int>>((dept) {
+                        return DropdownMenuItem<int>(
+                          value: dept['id'],
+                          child: Text(dept['name']),
+                        );
+                      }),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        _selectedDepartmentId = val;
+                      });
+                    },
+                  ),
             const SizedBox(height: 16),
             TextField(
               controller: _passwordController,

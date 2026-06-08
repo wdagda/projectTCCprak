@@ -5,9 +5,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 class ApiService {
   static const String baseUrl = 'http://34.128.121.83:3001/api';
 
-  // Helper method to get headers
   static Future<Map<String, String>> _getHeaders() async {
-    return {'Content-Type': 'application/json', 'Accept': 'application/json'};
+    return {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'Connection': 'close',
+    };
   }
 
   // Auth Methods
@@ -19,7 +22,7 @@ class ApiService {
       Uri.parse('$baseUrl/auth/login'),
       headers: await _getHeaders(),
       body: jsonEncode({'email': email, 'password': password}),
-    );
+    ).timeout(const Duration(seconds: 10));
     return _processResponse(response);
   }
 
@@ -38,15 +41,56 @@ class ApiService {
         'password': password,
         if (DepartmentId != null) 'DepartmentId': DepartmentId,
       }),
-    );
+    ).timeout(const Duration(seconds: 10));
     return _processResponse(response);
   }
 
-  static Future<Map<String, dynamic>> getDepartments() async {
+  static Future<List<dynamic>> getDepartments() async {
     final response = await http.get(
       Uri.parse('$baseUrl/departments'),
       headers: await _getHeaders(),
-    );
+    ).timeout(const Duration(seconds: 10));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load departments');
+    }
+  }
+
+  static Future<List<dynamic>> getCategories() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/categories'),
+      headers: await _getHeaders(),
+    ).timeout(const Duration(seconds: 10));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load categories');
+    }
+  }
+
+  static Future<List<dynamic>> getAssets() async {
+    final response = await http.get(
+      Uri.parse('$baseUrl/assets'),
+      headers: await _getHeaders(),
+    ).timeout(const Duration(seconds: 10));
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to load assets');
+    }
+  }
+
+  static Future<Map<String, dynamic>> requestBorrowing(int userId, int assetId, String returnDate) async {
+    final response = await http.post(
+      Uri.parse('$baseUrl/borrowings'),
+      headers: await _getHeaders(),
+      body: jsonEncode({
+        'user_id': userId,
+        'asset_id': assetId,
+        'return_date': returnDate,
+      }),
+    ).timeout(const Duration(seconds: 10));
     return _processResponse(response);
   }
 
@@ -66,7 +110,7 @@ class ApiService {
         if (password.isNotEmpty) 'password': password,
         if (DepartmentId != null) 'DepartmentId': DepartmentId,
       }),
-    );
+    ).timeout(const Duration(seconds: 10));
     return _processResponse(response);
   }
 
@@ -75,7 +119,7 @@ class ApiService {
     final response = await http.get(
       Uri.parse('$baseUrl/borrowings/user/$userId'),
       headers: await _getHeaders(),
-    );
+    ).timeout(const Duration(seconds: 10));
     if (response.statusCode == 200) {
       return jsonDecode(response.body);
     } else {
@@ -91,7 +135,7 @@ class ApiService {
       Uri.parse('$baseUrl/borrowings/$id/status'),
       headers: await _getHeaders(),
       body: jsonEncode({'status': status}),
-    );
+    ).timeout(const Duration(seconds: 10));
     return _processResponse(response);
   }
 
@@ -103,7 +147,7 @@ class ApiService {
         'terms_agreed': true,
         'signature_url': '/dummy-signature.png',
       }),
-    );
+    ).timeout(const Duration(seconds: 10));
     return _processResponse(response);
   }
 
