@@ -455,6 +455,7 @@ function Borrowings() {
               <th>Karyawan ID</th>
               <th>Status</th>
               <th>Tgl Pinjam</th>
+              <th>Tgl Kembali</th>
               <th>Aksi</th>
             </tr>
           </thead>
@@ -466,6 +467,7 @@ function Borrowings() {
                 <td>{log.User?.name || log.user_id}</td>
                 <td><span className={`status-badge status-${log.status}`}>{log.status}</span></td>
                 <td>{new Date(log.borrow_date).toLocaleDateString()}</td>
+                <td>{log.return_date ? new Date(log.return_date).toLocaleDateString() : '-'}</td>
                 <td>
                   <select 
                     value={log.status} 

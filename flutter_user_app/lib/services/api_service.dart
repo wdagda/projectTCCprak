@@ -81,14 +81,14 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> requestBorrowing(int userId, int assetId, String returnDate) async {
+  static Future<Map<String, dynamic>> requestBorrowing(int userId, int assetId, [String? returnDate]) async {
     final response = await http.post(
       Uri.parse('$baseUrl/borrowings'),
       headers: await _getHeaders(),
       body: jsonEncode({
         'user_id': userId,
         'asset_id': assetId,
-        'return_date': returnDate,
+        if (returnDate != null) 'return_date': returnDate,
       }),
     ).timeout(const Duration(seconds: 10));
     return _processResponse(response);

@@ -155,29 +155,20 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _requestBorrow(int assetId) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now().add(const Duration(days: 1)),
-      firstDate: DateTime.now(),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
-      helpText: 'Pilih Tanggal Pengembalian',
-    );
-    if (picked != null) {
-      try {
-        showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
-        await ApiService.requestBorrowing(_currentUser['id'], assetId, picked.toIso8601String());
-        if (!mounted) return;
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Berhasil mengajukan peminjaman')));
-        _fetchCatalog();
-        _fetchBorrowings();
-        setState(() {
-          _currentIndex = 0; // Go to borrowings tab
-        });
-      } catch (e) {
-        Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+    try {
+      showDialog(context: context, barrierDismissible: false, builder: (_) => const Center(child: CircularProgressIndicator()));
+      await ApiService.requestBorrowing(_currentUser['id'], assetId);
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Berhasil mengajukan peminjaman')));
+      _fetchCatalog();
+      _fetchBorrowings();
+      setState(() {
+        _currentIndex = 0; // Go to borrowings tab
+      });
+    } catch (e) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     }
   }
 
