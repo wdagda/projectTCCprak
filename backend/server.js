@@ -103,6 +103,11 @@ app.post('/api/departments', async (req, res) => {
   res.json(dept);
 });
 
+app.put('/api/departments/:id', async (req, res) => {
+  await models.Department.update(req.body, { where: { id: req.params.id } });
+  res.json({ success: true });
+});
+
 // 9. POST /api/assets/:id/conditions (NoSQL)
 app.post('/api/assets/:id/conditions', (req, res) => {
   const data = { ...req.body, asset_id: req.params.id, timestamp: new Date() };

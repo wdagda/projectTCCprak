@@ -5,14 +5,39 @@ import './index.css';
 
 const API_URL = 'http://34.128.121.83:3001/api';
 
-function Sidebar() {
+function Sidebar({ adminUser }) {
   const location = useLocation();
   return (
     <div className="sidebar" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
-      <div className="brand">Asset Admin</div>
+      <div className="brand" style={{ marginBottom: '1.5rem' }}>Asset Admin</div>
+      {adminUser && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '2rem', padding: '0 1rem' }}>
+          <div style={{
+            width: '40px',
+            height: '40px',
+            borderRadius: '50%',
+            backgroundColor: 'var(--accent)',
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: '1.2rem',
+            fontWeight: 'bold',
+            textTransform: 'uppercase'
+          }}>
+            {adminUser.name.charAt(0)}
+          </div>
+          <div>
+            <div style={{ color: 'var(--text-primary)', fontWeight: 'bold', fontSize: '0.95rem' }}>{adminUser.name}</div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Admin</div>
+          </div>
+        </div>
+      )}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
         <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`}>Dashboard</Link>
         <Link to="/assets" className={`nav-link ${location.pathname === '/assets' ? 'active' : ''}`}>Manajemen Aset</Link>
+        <Link to="/categories" className={`nav-link ${location.pathname === '/categories' ? 'active' : ''}`}>Kategori</Link>
+        <Link to="/departments" className={`nav-link ${location.pathname === '/departments' ? 'active' : ''}`}>Departemen</Link>
         <Link to="/borrowings" className={`nav-link ${location.pathname === '/borrowings' ? 'active' : ''}`}>Log Peminjaman</Link>
         <Link to="/users" className={`nav-link ${location.pathname === '/users' ? 'active' : ''}`}>Daftar Pengguna</Link>
         <Link to="/account" className={`nav-link ${location.pathname === '/account' ? 'active' : ''}`}>Akun Saya</Link>
@@ -27,7 +52,8 @@ function Login({ onLogin }) {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [role, setRole] = useState('employee');
-  const [departmentName, setDepartmentName] = useState('');
+  const [departments, setDepartments] = useState([]);
+  const [departmentId, setDepartmentId] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -44,7 +70,7 @@ function Login({ onLogin }) {
     setSuccessMsg('');
 
     if (isRegister) {
-      axios.post(`${API_URL}/auth/register`, { name, email, password, role, department: departmentName }).then(res => {
+      axios.post(`${API_URL}/auth/register`, { name, email, password, role, DepartmentId: parseInt(departmentId) }).then(res => {
         const user = res.data.user;
         if (user.role === 'admin') {
           onLogin(user);
@@ -91,7 +117,9 @@ function Login({ onLogin }) {
                 <option value="admin">Admin</option>
               </select>
 
-              <input className="form-input" placeholder="Departemen (Contoh: IT Support)" value={departmentName} onChange={e => setDepartmentName(e.target.value)} required />
+              <select className="form-input" value={departmentId} onChange={e => setDepartmentId(e.target.value)} required style={{ color: 'var(--text-primary)', backgroundColor: 'var(--bg-dark)' }}>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
             </>
           )}
         </div>
@@ -108,6 +136,12 @@ function Login({ onLogin }) {
 function Dashboard() {
   const [stats, setStats] = useState({ total: 0, borrowed: 0, available: 0, maintenance: 0 });
   const [recentLogs, setRecentLogs] = useState([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     axios.get(`${API_URL}/assets`).then(res => {
@@ -129,7 +163,13 @@ function Dashboard() {
 
   return (
     <div>
-      <h1 className="page-title">Dashboard</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Dashboard</h1>
+        <div style={{ textAlign: 'right', color: 'var(--text-secondary)' }}>
+          <div>{currentTime.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+          <div style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'var(--text-primary)' }}>{currentTime.toLocaleTimeString('id-ID')}</div>
+        </div>
+      </div>
       <div className="grid" style={{ marginBottom: '2.5rem' }}>
         <div className="card">
           <h3 className="form-label">Total Aset</h3>
@@ -193,6 +233,7 @@ function Assets() {
   const [editingAsset, setEditingAsset] = useState(null);
   const [assigningAsset, setAssigningAsset] = useState(null);
   const [selectedUserId, setSelectedUserId] = useState('');
+  const [filterCategoryId, setFilterCategoryId] = useState('all');
 
   useEffect(() => {
     fetchAssets();
@@ -244,11 +285,21 @@ function Assets() {
     });
   };
 
+  const filteredAssets = filterCategoryId === 'all' 
+    ? assets 
+    : assets.filter(a => a.CategoryId === parseInt(filterCategoryId));
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <h1 className="page-title">Manajemen Aset</h1>
-        <button className="btn" onClick={() => setShowModal(true)}>+ Tambah Aset</button>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+        <h1 className="page-title" style={{ margin: 0 }}>Manajemen Aset</h1>
+        <div style={{ display: 'flex', gap: '1rem' }}>
+          <select className="form-input" style={{ width: 'auto', margin: 0 }} value={filterCategoryId} onChange={e => setFilterCategoryId(e.target.value)}>
+            <option value="all">Semua Kategori</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <button className="btn" onClick={() => setShowModal(true)}>+ Tambah Aset</button>
+        </div>
       </div>
 
       <div className="card table-container">
@@ -262,7 +313,7 @@ function Assets() {
             </tr>
           </thead>
           <tbody>
-            {assets.map(asset => (
+            {filteredAssets.map(asset => (
               <tr key={asset.id}>
                 <td>{asset.serial_number}</td>
                 <td>{asset.name}</td>
@@ -319,6 +370,12 @@ function Assets() {
               <div className="form-group">
                 <label className="form-label">Serial Number</label>
                 <input className="form-input" required value={editingAsset.serial_number} onChange={e => setEditingAsset({ ...editingAsset, serial_number: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Kategori</label>
+                <select className="form-input" value={editingAsset.CategoryId || ''} onChange={e => setEditingAsset({ ...editingAsset, CategoryId: parseInt(e.target.value) })}>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Status</label>
@@ -448,11 +505,17 @@ function Account({ adminUser, setAdminUser, onLogout }) {
   const [name, setName] = useState(adminUser.name);
   const [email, setEmail] = useState(adminUser.email);
   const [password, setPassword] = useState('');
+  const [departmentId, setDepartmentId] = useState(adminUser.DepartmentId || '');
+  const [departments, setDepartments] = useState([]);
   const [message, setMessage] = useState('');
+
+  useEffect(() => {
+    axios.get(`${API_URL}/departments`).then(res => setDepartments(res.data));
+  }, []);
 
   const handleUpdate = (e) => {
     e.preventDefault();
-    axios.put(`${API_URL}/users/${adminUser.id}`, { name, email, password }).then(res => {
+    axios.put(`${API_URL}/users/${adminUser.id}`, { name, email, password, DepartmentId: departmentId ? parseInt(departmentId) : null }).then(res => {
       const updatedUser = res.data.user;
       setAdminUser(updatedUser);
       localStorage.setItem('adminUser', JSON.stringify(updatedUser));
@@ -465,7 +528,28 @@ function Account({ adminUser, setAdminUser, onLogout }) {
 
   return (
     <div>
-      <h1 className="page-title">Akun Saya</h1>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+        <div style={{
+          width: '60px',
+          height: '60px',
+          borderRadius: '50%',
+          backgroundColor: 'var(--accent)',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '1.8rem',
+          fontWeight: 'bold',
+          textTransform: 'uppercase',
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+        }}>
+          {adminUser.name.charAt(0)}
+        </div>
+        <div>
+          <h1 className="page-title" style={{ margin: 0, marginBottom: '0.2rem' }}>Akun Saya</h1>
+          <div style={{ color: 'var(--text-secondary)' }}>{adminUser.email}</div>
+        </div>
+      </div>
       <div className="card form-card">
         <h2 className="card-title">Detail Profil</h2>
         {message && <div className={`alert ${message.includes('Gagal') ? 'alert-danger' : 'alert-success'}`}>{message}</div>}
@@ -479,6 +563,13 @@ function Account({ adminUser, setAdminUser, onLogout }) {
             <input type="email" className="form-input" required value={email} onChange={e => setEmail(e.target.value)} />
           </div>
           <div className="form-group">
+            <label className="form-label">Departemen</label>
+            <select className="form-input" value={departmentId} onChange={e => setDepartmentId(e.target.value)}>
+              <option value="">-- Pilih Departemen --</option>
+              {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
             <label className="form-label">Password Baru (Opsional)</label>
             <input type="password" className="form-input" placeholder="Isi untuk mengganti password" value={password} onChange={e => setPassword(e.target.value)} />
           </div>
@@ -490,6 +581,192 @@ function Account({ adminUser, setAdminUser, onLogout }) {
         <h2 className="card-title text-danger">Sesi</h2>
         <button className="btn btn-danger btn-full" onClick={onLogout}>Logout</button>
       </div>
+    </div>
+  );
+}
+
+function Categories() {
+  const [categories, setCategories] = useState([]);
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [editingCategory, setEditingCategory] = useState(null);
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = () => {
+    axios.get(`${API_URL}/categories`).then(res => setCategories(res.data));
+  };
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    axios.post(`${API_URL}/categories`, { name, description }).then(() => {
+      setName('');
+      setDescription('');
+      fetchCategories();
+    });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    axios.put(`${API_URL}/categories/${editingCategory.id}`, { name: editingCategory.name, description: editingCategory.description }).then(() => {
+      setEditingCategory(null);
+      fetchCategories();
+    });
+  };
+
+  return (
+    <div>
+      <h1 className="page-title">Manajemen Kategori</h1>
+      <div className="card form-card" style={{ marginBottom: '2rem' }}>
+        <h2 className="card-title">Tambah Kategori</h2>
+        <form onSubmit={handleAdd}>
+          <div className="form-group">
+            <label className="form-label">Nama Kategori</label>
+            <input className="form-input" required value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Deskripsi</label>
+            <input className="form-input" value={description} onChange={e => setDescription(e.target.value)} />
+          </div>
+          <button type="submit" className="btn">Simpan</button>
+        </form>
+      </div>
+
+      <div className="card table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nama Kategori</th>
+              <th>Deskripsi</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {categories.map(c => (
+              <tr key={c.id}>
+                <td>{c.id}</td>
+                <td>{c.name}</td>
+                <td>{c.description || '-'}</td>
+                <td>
+                  <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setEditingCategory(c)}>Edit</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editingCategory && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2 style={{ marginBottom: '1.5rem' }}>Edit Kategori</h2>
+            <form onSubmit={handleEditSubmit}>
+              <div className="form-group">
+                <label className="form-label">Nama Kategori</label>
+                <input className="form-input" required value={editingCategory.name} onChange={e => setEditingCategory({ ...editingCategory, name: e.target.value })} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Deskripsi</label>
+                <input className="form-input" value={editingCategory.description || ''} onChange={e => setEditingCategory({ ...editingCategory, description: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-danger" onClick={() => setEditingCategory(null)}>Batal</button>
+                <button type="submit" className="btn">Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Departments() {
+  const [departments, setDepartments] = useState([]);
+  const [name, setName] = useState('');
+  const [editingDepartment, setEditingDepartment] = useState(null);
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
+  const fetchDepartments = () => {
+    axios.get(`${API_URL}/departments`).then(res => setDepartments(res.data));
+  };
+
+  const handleAdd = (e) => {
+    e.preventDefault();
+    axios.post(`${API_URL}/departments`, { name }).then(() => {
+      setName('');
+      fetchDepartments();
+    });
+  };
+
+  const handleEditSubmit = (e) => {
+    e.preventDefault();
+    axios.put(`${API_URL}/departments/${editingDepartment.id}`, { name: editingDepartment.name }).then(() => {
+      setEditingDepartment(null);
+      fetchDepartments();
+    });
+  };
+
+  return (
+    <div>
+      <h1 className="page-title">Manajemen Departemen</h1>
+      <div className="card form-card" style={{ marginBottom: '2rem' }}>
+        <h2 className="card-title">Tambah Departemen</h2>
+        <form onSubmit={handleAdd}>
+          <div className="form-group">
+            <label className="form-label">Nama Departemen</label>
+            <input className="form-input" required value={name} onChange={e => setName(e.target.value)} />
+          </div>
+          <button type="submit" className="btn">Simpan</button>
+        </form>
+      </div>
+
+      <div className="card table-container">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nama Departemen</th>
+              <th>Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {departments.map(d => (
+              <tr key={d.id}>
+                <td>{d.id}</td>
+                <td>{d.name}</td>
+                <td>
+                  <button className="btn" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setEditingDepartment(d)}>Edit</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {editingDepartment && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h2 style={{ marginBottom: '1.5rem' }}>Edit Departemen</h2>
+            <form onSubmit={handleEditSubmit}>
+              <div className="form-group">
+                <label className="form-label">Nama Departemen</label>
+                <input className="form-input" required value={editingDepartment.name} onChange={e => setEditingDepartment({ ...editingDepartment, name: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn btn-danger" onClick={() => setEditingDepartment(null)}>Batal</button>
+                <button type="submit" className="btn">Simpan</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -517,11 +794,13 @@ function App() {
   return (
     <BrowserRouter>
       <div className="layout" style={{ display: 'flex', minHeight: '100vh' }}>
-        <Sidebar />
+        <Sidebar adminUser={adminUser} />
         <div className="main-content" style={{ flex: 1, padding: '2rem' }}>
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/assets" element={<Assets />} />
+            <Route path="/categories" element={<Categories />} />
+            <Route path="/departments" element={<Departments />} />
             <Route path="/borrowings" element={<Borrowings />} />
             <Route path="/users" element={<Users />} />
             <Route path="/account" element={<Account adminUser={adminUser} setAdminUser={setAdminUser} onLogout={handleLogout} />} />
